@@ -1,0 +1,26 @@
+{
+  "id": "ba333dac-2847-47a6-acba-31c93c22fe08",
+  "name": "BCS - Genie Customizations",
+  "publisher": "Bond Consulting Services",
+  "version": "1.0.0.17",
+  "brief": "",
+  "description": "Add Part No. and general customnization required by the Genie Group.",
+  "privacyStatement": "",
+  "EULA": "",
+  "help": "",
+  "url": "",
+  "logo": "",
+  "dependencies": [],
+  "screenshots": [],
+  "platform": "1.0.0.0",
+  "application": "18.0.0.0",
+  "idRanges": [
+    {
+      "from": 58100,
+      "to": 58349
+    }
+  ],
+  "contextSensitiveHelpUrl": "https://ItemDropDown1.com/help/",
+  "showMyCode": true,
+  "runtime": "7.0"
+}
