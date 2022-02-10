@@ -16,6 +16,11 @@ tableextension 58142 SalesHeaderExt extends "Sales Header"
             DataClassification = ToBeClassified;
             Editable = false;
         }
+        field(58120; "Invoice Only"; Boolean)
+        {
+            Caption = 'Invoice Only';
+            DataClassification = ToBeClassified;
+        }
 
         modify("External Document No.")
         {

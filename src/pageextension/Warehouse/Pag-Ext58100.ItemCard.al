@@ -51,6 +51,14 @@ pageextension 58100 "ItemCard" extends "Item Card"
                 ApplicationArea = All;
             }
         }
+        addafter("Cost is Posted to G/L")
+        {
+            field("Inventory Value Zero"; Rec."Inventory Value Zero")
+            {
+                ApplicationArea = All;
+            }
+
+        }
     }
 
     actions

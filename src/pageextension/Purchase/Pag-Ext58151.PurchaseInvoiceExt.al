@@ -16,7 +16,11 @@ pageextension 58151 PurchaseInvoiceExt extends "Purchase Invoice"
             {
                 ApplicationArea = All;
             }
-
+            field("Invoice Only"; Rec."Invoice Only")
+            {
+                ApplicationArea = All;
+                Style = Favorable;
+            }
         }
     }
 }

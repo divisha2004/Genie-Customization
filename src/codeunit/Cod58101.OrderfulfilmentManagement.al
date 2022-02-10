@@ -34,7 +34,7 @@ codeunit 58101 "Order fulfilment Management"
 
     end;
 
-    local procedure GetNextShipmentDate(ShipMethodCode: CODE[10]; CalcDate: Date) NexShipmentDate: Date
+    procedure GetNextShipmentDate(ShipMethodCode: CODE[10]; ShipmentDate: Date) NexShipmentDate: Date
     var
         ShipmentMethod: Record "Shipment Method";
     begin
@@ -43,29 +43,17 @@ codeunit 58101 "Order fulfilment Management"
                 ShipmentMethod."Shipment Day"::" ":
                     exit;
                 ShipmentMethod."Shipment Day"::Monday:
-                    begin
-                        NexShipmentDate := CalcDate
-                    end;
+                    NexShipmentDate := CalcDate('CD+WD1', ShipmentDate);
                 ShipmentMethod."Shipment Day"::Tuesday:
-                    begin
-
-                    end;
+                    NexShipmentDate := CalcDate('CD+WD2', ShipmentDate);
                 ShipmentMethod."Shipment Day"::Wednesday:
-                    begin
-
-                    end;
+                    NexShipmentDate := CalcDate('CD+WD3', ShipmentDate);
                 ShipmentMethod."Shipment Day"::Thursday:
-                    begin
-
-                    end;
+                    NexShipmentDate := CalcDate('CD+WD4', ShipmentDate);
                 ShipmentMethod."Shipment Day"::Friday:
-                    begin
-
-                    end;
+                    NexShipmentDate := CalcDate('CD+WD5', ShipmentDate);
                 ShipmentMethod."Shipment Day"::"Any Day":
-                    begin
-
-                    end;
+                    NexShipmentDate := CalcDate('CD+1D', ShipmentDate);
             end;
         END;
     end;

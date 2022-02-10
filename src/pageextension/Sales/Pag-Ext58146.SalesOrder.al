@@ -14,6 +14,11 @@ pageextension 58146 SalesOrder extends "Sales Order"
                 ApplicationArea = All;
                 Style = StrongAccent;
             }
+            field("Invoice Only"; Rec."Invoice Only")
+            {
+                ApplicationArea = All;
+                Style = Favorable;
+            }
         }
 
     }

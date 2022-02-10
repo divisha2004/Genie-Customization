@@ -17,5 +17,11 @@ tableextension 58132 PurchInvoiceHeader extends "Purch. Inv. Header"
             Caption = 'Customer PO No.';
             DataClassification = ToBeClassified;
         }
+        field(58120; "Invoice Only"; Boolean)
+        {
+            Caption = 'Invoice Only';
+            DataClassification = ToBeClassified;
+
+        }
     }
 }

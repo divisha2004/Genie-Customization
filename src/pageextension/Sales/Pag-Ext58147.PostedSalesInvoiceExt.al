@@ -9,6 +9,11 @@ pageextension 58147 PostedSalesInvoiceExt extends "Posted Sales Invoice"
                 ApplicationArea = All;
                 Style = StrongAccent;
             }
+            field("Invoice Only"; Rec."Invoice Only")
+            {
+                ApplicationArea = All;
+                Style = Favorable;
+            }
         }
 
     }

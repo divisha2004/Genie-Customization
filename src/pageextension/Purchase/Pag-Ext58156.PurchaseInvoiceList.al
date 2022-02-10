@@ -8,6 +8,11 @@ pageextension 58156 PurchaseInvoiceList extends "Purchase Invoices"
             {
                 ApplicationArea = All;
             }
+            field("Invoice Only"; Rec."Invoice Only")
+            {
+                ApplicationArea = All;
+            }
+
         }
     }
 }

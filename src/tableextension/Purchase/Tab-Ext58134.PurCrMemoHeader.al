@@ -17,5 +17,11 @@ tableextension 58134 PurCrMemoHeader extends "Purch. Cr. Memo Hdr."
             Caption = 'Customer PO No.';
             DataClassification = ToBeClassified;
         }
+        field(58120; "Invoice Only"; Boolean)
+        {
+            Caption = 'Invoice Only';
+            DataClassification = ToBeClassified;
+
+        }
     }
 }

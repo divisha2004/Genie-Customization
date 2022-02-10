@@ -23,6 +23,11 @@ pageextension 58116 PurchaseOrderExt extends "Purchase Order"
             {
                 ApplicationArea = All;
             }
+            field("Invoice Only"; Rec."Invoice Only")
+            {
+                ApplicationArea = All;
+            }
+
 
         }
     }

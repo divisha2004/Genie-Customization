@@ -25,7 +25,97 @@ codeunit 58100 "Events Utility"
     local procedure OnCreatePurchaseHeaderOnBeforeInsert(var PurchaseHeader: Record "Purchase Header"; SalesHeader: Record "Sales Header"; Vendor: Record Vendor)
     begin
         PurchaseHeader."Order Reference Type" := SalesHeader."Document Type";
-        PurchaseHeader."Order Reference No." := SalesHeader."No."
+        PurchaseHeader."Order Reference No." := SalesHeader."No.";
+        PurchaseHeader."Invoice Only" := SalesHeader."Invoice Only";
+    end;
+
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Purch.-Post", 'OnCopyToTempLinesLoop', '', false, false)]
+    local procedure OnCopyToTempLinesLoop(var PurchLine: Record "Purchase Line")
+    var
+        PurchaseHeader: Record "Purchase Header";
+        Item: Record Item;
+    begin
+        if PurchLine."Document Type" <> PurchLine."Document Type"::Invoice then
+            exit;
+        PurchaseHeader.get(PurchLine."Document Type", PurchLine."Document No.");
+        if not PurchaseHeader."Invoice Only" then
+            exit;
+        if PurchLine.type <> PurchLine.Type::Item then
+            exit;
+        IF iTEM.GET(PurchLine."No.") THEN begin
+            Item."Inventory Value Zero" := true;
+            item.Modify(true);
+        end;
+    end;
+
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Sales-Post", 'OnAfterCopyToTempLines', '', false, false)]
+    local procedure OnAfterCopyToTempLines(var TempSalesLine: Record "Sales Line" temporary)
+    var
+        SalesHeader: Record "Sales Header";
+        Item: Record Item;
+    begin
+        if TempSalesLine."Document Type" <> TempSalesLine."Document Type"::Invoice then
+            exit;
+        SalesHeader.get(TempSalesLine."Document Type", TempSalesLine."Document No.");
+        if not SalesHeader."Invoice Only" then
+            exit;
+
+        if TempSalesLine.FindFirst() then
+            repeat
+                if (TempSalesLine.Type = TempSalesLine.Type::Item) AND (TempSalesLine."No." <> '') then begin
+                    IF iTEM.GET(TempSalesLine."No.") THEN begin
+                        Item."Inventory Value Zero" := true;
+                        Item.Modify(true);
+                    end;
+                end;
+            until TempSalesLine.Next() = 0;
+    end;
+
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Purch.-Post", 'OnAfterPostPurchLines', '', false, false)]
+    local procedure OnAfterPostPurchLines(var PurchHeader: Record "Purchase Header"; var PurchRcptHeader: Record "Purch. Rcpt. Header"; var PurchInvHeader: Record "Purch. Inv. Header"; var PurchCrMemoHdr: Record "Purch. Cr. Memo Hdr."; var ReturnShipmentHeader: Record "Return Shipment Header"; WhseShip: Boolean; WhseReceive: Boolean; var PurchLinesProcessed: Boolean; CommitIsSuppressed: Boolean; EverythingInvoiced: Boolean; var TempInvoicePostBuffer: Record "Invoice Post. Buffer" temporary; var TempPurchLineGlobal: Record "Purchase Line" temporary)
+    var
+        PurchLine: Record "Purchase Line";
+        Item: Record Item;
+    begin
+        if PurchHeader."Document Type" <> PurchHeader."Document Type"::Invoice then
+            exit;
+        if not PurchHeader."Invoice Only" then
+            exit;
+
+        PurchLine.reset;
+        PurchLine.SetRange("Document Type", PurchHeader."Document Type");
+        PurchLine.SetRange("Document No.", PurchHeader."No.");
+        PurchLine.SetRange(Type, PurchLine.type::Item);
+        PurchLine.SetFilter("No.", '<>%1', '');
+        if PurchLine.FindFirst() then
+            repeat
+                if Item.Get(PurchLine."No.") then begin
+                    Item."Inventory Value Zero" := false;
+                    Item.Modify();
+                end;
+            until PurchLine.Next() = 0;
+    end;
+
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Sales-Post", 'OnAfterPostSalesDoc', '', false, false)]
+    local procedure OnAfterPostSalesDoc(var SalesHeader: Record "Sales Header"; var GenJnlPostLine: Codeunit "Gen. Jnl.-Post Line"; SalesShptHdrNo: Code[20]; RetRcpHdrNo: Code[20]; SalesInvHdrNo: Code[20]; SalesCrMemoHdrNo: Code[20]; CommitIsSuppressed: Boolean; InvtPickPutaway: Boolean; var CustLedgerEntry: Record "Cust. Ledger Entry"; WhseShip: Boolean; WhseReceiv: Boolean)
+    var
+        SalesInvLine: Record "Sales Invoice Line";
+        SalesInvHeader: Record "Sales Invoice Header";
+        Item: Record Item;
+    begin
+        SalesInvHeader.get(SalesInvHdrNo);
+        if not SalesInvHeader."Invoice Only" then
+            exit;
+        SalesInvLine.reset;
+        SalesInvLine.SetRange("Document No.", SalesInvHeader."No.");
+        SalesInvLine.SetRange(Type, SalesInvLine.Type::Item);
+        if SalesInvLine.FindFirst() then
+            repeat
+                if Item.get(SalesInvLine."No.") then begin
+                    Item."Inventory Value Zero" := false;
+                    Item.Modify();
+                end;
+            until SalesInvLine.Next() = 0;
     end;
 
     [EventSubscriber(ObjectType::Table, Database::"Requisition Line", 'OnAfterCopyFromItem', '', false, false)]
@@ -47,13 +137,16 @@ codeunit 58100 "Events Utility"
         end;
     end;
 
-    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Release Sales Document", 'OnAfterReleaseSalesDoc', '', false, false)]
-    local procedure OnAfterReleaseSalesDoc(var SalesHeader: Record "Sales Header"; PreviewMode: Boolean; var LinesWereModified: Boolean)
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Release Sales Document", 'OnAfterUpdateSalesDocLines', '', false, false)]
+    local procedure OnAfterUpdateSalesDocLines(var SalesHeader: Record "Sales Header"; var LinesWereModified: Boolean; PreviewMode: Boolean)
     var
         ShipMethod: Record "Shipment Method";
+        OrderFullFillMgmt: codeunit "Order fulfilment Management";
     begin
         if SalesHeader."Shipment Method Code" = '' then
             exit;
+        clear(OrderFullFillMgmt);
+        SalesHeader."Expected Shipment Date" := OrderFullFillMgmt.GetNextShipmentDate(SalesHeader."Shipment Method Code", SalesHeader."Shipment Date");
     end;
 
 

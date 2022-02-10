@@ -16,7 +16,11 @@ pageextension 58152 PostedPurchInvoice extends "Posted Purchase Invoice"
             {
                 ApplicationArea = All;
             }
-
+            field("Invoice Only"; Rec."Invoice Only")
+            {
+                ApplicationArea = All;
+                Style = Favorable;
+            }
         }
     }
 }
