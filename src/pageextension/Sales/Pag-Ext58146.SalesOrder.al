@@ -32,7 +32,7 @@ pageextension 58146 SalesOrder extends "Sales Order"
                 action(PrintBlindShipOrder)
                 {
                     ApplicationArea = All;
-                    Caption = 'Order Acknowledgement Double Blind Shipment';
+                    Caption = 'Double Blind Shipment (Ack)';
                     Promoted = true;
                     PromotedCategory = Report;
                     Image = PrintAcknowledgement;
@@ -42,6 +42,26 @@ pageextension 58146 SalesOrder extends "Sales Order"
                     begin
                         CurrPage.SetSelectionFilter(SalesHeader);
                         Report.RunModal(58101, true, true, SalesHeader);
+                    end;
+                }
+            }
+            group(NormalShipment)
+            {
+                Caption = 'Normal Shipment';
+                action(PrintNormalShip)
+                {
+                    ApplicationArea = All;
+                    Caption = 'Normal Shipment (Ack)';
+                    Promoted = true;
+                    PromotedCategory = Report;
+                    PromotedIsBig = true;
+                    Image = Print;
+                    trigger OnAction()
+                    var
+                        SalesHeader: Record "Sales Header";
+                    begin
+                        CurrPage.SetSelectionFilter(SalesHeader);
+                        Report.RunModal(58102, true, true, SalesHeader);
                     end;
                 }
             }

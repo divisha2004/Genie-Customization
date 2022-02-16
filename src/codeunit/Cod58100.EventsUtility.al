@@ -21,12 +21,30 @@ codeunit 58100 "Events Utility"
 
     end;
 
+
+
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Purch. Doc. From Sales Doc.", 'OnCreatePurchaseHeaderOnBeforeInsert', '', false, false)]
     local procedure OnCreatePurchaseHeaderOnBeforeInsert(var PurchaseHeader: Record "Purchase Header"; SalesHeader: Record "Sales Header"; Vendor: Record Vendor)
     begin
         PurchaseHeader."Order Reference Type" := SalesHeader."Document Type";
         PurchaseHeader."Order Reference No." := SalesHeader."No.";
         PurchaseHeader."Invoice Only" := SalesHeader."Invoice Only";
+        PurchaseHeader."Customer PO No." := SalesHeader."External Document No.";
+    end;
+
+
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Req. Wksh.-Make Order", 'OnAfterInsertPurchOrderHeader', '', false, false)]
+    local procedure ReqWkshOnAfterInsertPurchOrderHeader(var RequisitionLine: Record "Requisition Line"; var PurchaseOrderHeader: Record "Purchase Header"; CommitIsSuppressed: Boolean; SpecialOrder: Boolean)
+    var
+        SalesHeader: Record "Sales Header";
+    begin
+        PurchaseOrderHeader."Order Reference Type" := PurchaseOrderHeader."Order Reference Type"::Order;
+        PurchaseOrderHeader."Order Reference No." := RequisitionLine."Sales Order No.";
+        SalesHeader.reset;
+        SalesHeader.SetRange("Document Type", SalesHeader."Document Type"::Order);
+        SalesHeader.SetRange("No.", RequisitionLine."Sales Order No.");
+        if SalesHeader.FindFirst() then
+            PurchaseOrderHeader."Customer PO No." := SalesHeader."External Document No.";
     end;
 
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Purch.-Post", 'OnCopyToTempLinesLoop', '', false, false)]
@@ -406,10 +424,17 @@ codeunit 58100 "Events Utility"
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Req. Wksh.-Make Order", 'OnAfterInsertPurchOrderHeader', '', false, false)]
 
     local procedure OnAfterInsertPurchOrderHeader(var RequisitionLine: Record "Requisition Line"; var PurchaseOrderHeader: Record "Purchase Header"; CommitIsSuppressed: Boolean; SpecialOrder: Boolean)
+    var
+        SalesHeader: Record "Sales Header";
     begin
         if (RequisitionLine."Demand Type" = 37) AND (RequisitionLine."Demand Subtype" = RequisitionLine."Demand Subtype"::"1") then
             PurchaseOrderHeader."Order Reference Type" := PurchaseOrderHeader."Order Reference Type"::Order;
         PurchaseOrderHeader."Order Reference No." := RequisitionLine."Demand Order No.";
+        SalesHeader.Reset();
+        SalesHeader.SetRange("Document Type", SalesHeader."Document Type"::Order);
+        SalesHeader.SetRange("No.", RequisitionLine."Demand Order No.");
+        if SalesHeader.FindFirst() THEN
+            PurchaseOrderHeader."Customer PO No." := SalesHeader."External Document No.";
     end;
 
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Purch. Doc. From Sales Doc.", 'OnCopySalesLinesToPurchaseLinesOnLineTypeValidate', '', false, false)]
@@ -423,6 +448,12 @@ codeunit 58100 "Events Utility"
                 PurchaseLine.Type := PurchaseLine.Type::"G/L Account";
                 IsHandled := true;
             end;
+    end;
+
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Purch. Doc. From Sales Doc.", 'OnCopySalesLinesToPurchaseLinesOnBeforeInsert', '', false, false)]
+    local procedure OnCopySalesLinesToPurchaseLinesOnBeforeInsert(var PurchaseLine: Record "Purchase Line"; SalesLine: Record "Sales Line")
+    begin
+        PurchaseLine.Validate("Unit Cost", SalesLine."Unit Cost");
     end;
 
 }
