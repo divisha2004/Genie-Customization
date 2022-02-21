@@ -7,5 +7,12 @@ tableextension 58109 "CustomerExt" extends Customer
             Caption = 'Customer Price List Type';
             DataClassification = ToBeClassified;
         }
+
+        field(58110; "Shipment Day"; Enum "Shipment Day")
+        {
+            Caption = 'Shipment Day';
+            DataClassification = ToBeClassified;
+
+        }
     }
 }

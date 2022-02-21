@@ -402,6 +402,7 @@ report 58102 SalesOrderAckNormalShipment
             column(ShowWorkDescription; ShowWorkDescription)
             {
             }
+
             dataitem(Line; "Sales Line")
             {
                 DataItemLink = "Document No." = FIELD("No.");
@@ -435,7 +436,7 @@ report 58102 SalesOrderAckNormalShipment
                 column(Description_Line_Lbl; FieldCaption(Description))
                 {
                 }
-                column(PartNo; "Part No.")
+                column(PartNo; ItemNoWithVariant)
                 {
 
                 }
@@ -476,6 +477,10 @@ report 58102 SalesOrderAckNormalShipment
                 }
                 column(Quantity_Line_Lbl; FieldCaption(Quantity))
                 {
+                }
+                column(Outstanding_Quantity; "Outstanding Quantity")
+                {
+
                 }
                 column(Type_Line; Format(Type))
                 {
@@ -540,6 +545,10 @@ report 58102 SalesOrderAckNormalShipment
                 column(LineAmount_Lbl; LineAmountLbl)
                 {
                 }
+                column(TotalLines; TotalLines)
+                {
+
+                }
                 dataitem(AssemblyLine; "Assembly Line")
                 {
                     DataItemTableView = SORTING("Document No.", "Line No.");
@@ -599,6 +608,12 @@ report 58102 SalesOrderAckNormalShipment
                     if FirstLineHasBeenOutput then
                         Clear(DummyCompanyInfo.Picture);
                     FirstLineHasBeenOutput := true;
+                    TotalLines := Line.count;
+
+                    if ("Variant Code" = '') THEN
+                        ItemNoWithVariant := "Part No."
+                    else
+                        ItemNoWithVariant := "Part No." + ' ' + "Variant Code"
                 end;
 
                 trigger OnPreDataItem()
@@ -613,6 +628,7 @@ report 58102 SalesOrderAckNormalShipment
                     PrevLineAmount := 0;
                     FirstLineHasBeenOutput := false;
                     DummyCompanyInfo.Picture := CompanyInfo.Picture;
+                    TotalLines := 0;
                 end;
             }
             dataitem(WorkDescriptionLines; "Integer")
@@ -1087,6 +1103,9 @@ report 58102 SalesOrderAckNormalShipment
     end;
 
     var
+
+        ItemNoWithVariant: Text;
+        TotalLines: Integer;
         SalesConfirmationLbl: Label 'Order Confirmation';
         SalespersonLbl: Label 'Sales person';
         CompanyInfoBankAccNoLbl: Label 'Account No.';
@@ -1097,7 +1116,7 @@ report 58102 SalesOrderAckNormalShipment
         EMailLbl: Label 'Email';
         HomePageLbl: Label 'Home Page';
         InvDiscBaseAmtLbl: Label 'Invoice Discount Base Amount';
-        InvDiscountAmtLbl: Label 'Invoice Discount';
+        InvDiscountAmtLbl: Label 'INVOICE DISCOUNT';
         InvNoLbl: Label 'Order No.';
         LineAmtAfterInvDiscLbl: Label 'Payment Discount on VAT';
         LocalCurrencyLbl: Label 'Local Currency';
@@ -1109,7 +1128,7 @@ report 58102 SalesOrderAckNormalShipment
         ShipmentLbl: Label 'Shipment';
         ShiptoAddrLbl: Label 'Ship-to Address';
         ShptMethodDescLbl: Label 'Shipment Method';
-        SubtotalLbl: Label 'Subtotal';
+        SubtotalLbl: Label 'SUB-TOTAL';
         TotalLbl: Label 'Total';
         VATAmtSpecificationLbl: Label 'VAT Amount Specification';
         VATAmtLbl: Label 'VAT Amount';
@@ -1194,7 +1213,7 @@ report 58102 SalesOrderAckNormalShipment
         AmtSubjecttoSalesTaxLbl: Label 'Amount Subject to Sales Tax';
         AmtExemptfromSalesTaxLbl: Label 'Amount Exempt from Sales Tax';
         PONumberLbl: Label 'P.O. Number';
-        TotalTaxLbl: Label 'Total Tax';
+        TotalTaxLbl: Label 'TAX';
         UnitLbl: Label 'Unit';
         UnitPriceLbl: Label 'Unit Price';
         LineAmountLbl: Label 'Line Amount';
@@ -1231,6 +1250,8 @@ report 58102 SalesOrderAckNormalShipment
         FormatDocument.SetPaymentTerms(PaymentTerms, SalesHeader."Payment Terms Code", SalesHeader."Language Code");
         FormatDocument.SetPaymentMethod(PaymentMethod, SalesHeader."Payment Method Code", SalesHeader."Language Code");
         FormatDocument.SetShipmentMethod(ShipmentMethod, SalesHeader."Shipment Method Code", SalesHeader."Language Code");
+
+        TotalInclVATText := 'AMOUNT TENDERED';
 
     end;
 

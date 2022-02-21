@@ -8,6 +8,11 @@ pageextension 58155 PurchaseOrderList extends "Purchase Order List"
             {
                 ApplicationArea = All;
             }
+            field("Customer PO No."; Rec."Customer PO No.")
+            {
+                ApplicationArea = All;
+            }
+
         }
     }
 }

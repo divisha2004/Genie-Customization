@@ -24,21 +24,5 @@ pageextension 58142 "ReqWorksheetExt" extends "Req. Worksheet"
             }
         }
     }
-    trigger OnOpenPage()
-    var
-        ReqWhseName: Record "Requisition Wksh. Name";
-        GetSalesOrder: Report "Get Sales Orders";
-    begin
-        ReqWhseName.reset;
-        ReqWhseName.SetRange("Worksheet Template Name", Rec."Worksheet Template Name");
-        ReqWhseName.SetRange(Name, rec."Journal Batch Name");
-        if ReqWhseName.FindFirst() THEN
-            IF ReqWhseName."Automate Get Sales Order" then begin
-                GetSalesOrder.SetReqWkshLine(Rec, 0);
-                GetSalesOrder.UseRequestPage(false);
-                GetSalesOrder.Run;
-                Clear(GetSalesOrder);
-            end;
 
-    end;
 }

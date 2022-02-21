@@ -4,20 +4,20 @@ pageextension 58146 SalesOrder extends "Sales Order"
     {
         addafter("External Document No.")
         {
-            field("Double Blind Shipment"; Rec."Double Blind Shipment")
+            field("Shipment Day"; rec."Shipment Day")
             {
                 ApplicationArea = All;
                 Style = StrongAccent;
             }
-            field("Expected Shipment Date"; Rec."Expected Shipment Date")
+            field("Blind Shipment"; Rec."Double Blind Shipment")
             {
                 ApplicationArea = All;
                 Style = StrongAccent;
             }
-            field("Invoice Only"; Rec."Invoice Only")
+            field("Expected Shipment Date"; Rec."Shipment Date")
             {
                 ApplicationArea = All;
-                Style = Favorable;
+                Style = StrongAccent;
             }
         }
 
@@ -28,11 +28,11 @@ pageextension 58146 SalesOrder extends "Sales Order"
         {
             group(DoubleBlind)
             {
-                Caption = 'Double Blind Shipment';
+                Caption = 'Blind Shipment';
                 action(PrintBlindShipOrder)
                 {
                     ApplicationArea = All;
-                    Caption = 'Double Blind Shipment (Ack)';
+                    Caption = 'Blind Shipment (Ack)';
                     Promoted = true;
                     PromotedCategory = Report;
                     Image = PrintAcknowledgement;
@@ -64,6 +64,39 @@ pageextension 58146 SalesOrder extends "Sales Order"
                         Report.RunModal(58102, true, true, SalesHeader);
                     end;
                 }
+            }
+            action(RunOrderFulFilment)
+            {
+                ApplicationArea = All;
+                Caption = 'Process Order Fulfilment';
+                Promoted = true;
+                PromotedCategory = Process;
+                PromotedIsBig = true;
+                Image = Process;
+                Visible = true;
+                trigger OnAction()
+                var
+                    OrderfulfilMgmt: codeunit "Order fulfilment Management";
+                begin
+                    Clear(OrderfulfilMgmt);
+                    OrderfulfilMgmt.ProcessWhseRequest();
+                end;
+            }
+            action(ShowWhseLogEntries)
+            {
+                ApplicationArea = All;
+                Caption = 'Automate Warehouse log Entries';
+                Promoted = true;
+                PromotedCategory = Process;
+                PromotedIsBig = true;
+                Image = Process;
+                Visible = true;
+                trigger OnAction()
+                var
+
+                begin
+                    page.RunModal(58101);
+                end;
             }
         }
     }

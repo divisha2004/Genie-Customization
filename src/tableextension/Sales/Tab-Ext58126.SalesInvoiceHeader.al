@@ -4,7 +4,7 @@ tableextension 58126 "SalesInvoiceHeader" extends "Sales Invoice Header"
     {
         field(58100; "Double Blind Shipment"; Boolean)
         {
-            Caption = 'Double Blind Shipment';
+            Caption = 'Blind Shipment';
             DataClassification = ToBeClassified;
         }
         field(58110; "Expected Shipment Date"; Date)

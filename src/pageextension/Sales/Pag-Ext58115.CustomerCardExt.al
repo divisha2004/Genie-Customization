@@ -11,6 +11,10 @@ pageextension 58115 "CustomerCardExt" extends "Customer Card"
             {
                 ApplicationArea = All;
             }
+            field("Shipment Day"; Rec."Shipment Day")
+            {
+                ApplicationArea = All;
+            }
         }
     }
     actions

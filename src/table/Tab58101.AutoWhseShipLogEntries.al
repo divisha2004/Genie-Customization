@@ -75,6 +75,11 @@ table 58101 "Auto Whse. Ship Log Entries"
             Caption = 'Order Quantity';
             DataClassification = ToBeClassified;
         }
+        field(515; "Available Quantity"; Decimal)
+        {
+            Caption = 'Available Quantity';
+            DataClassification = ToBeClassified;
+        }
         field(520; "Whse Quantity"; Decimal)
         {
             Caption = 'Whse Quantity';
@@ -98,7 +103,7 @@ table 58101 "Auto Whse. Ship Log Entries"
         field(600; Status; Option)
         {
             Caption = 'Status';
-            OptionMembers = "Partially Shipped","Completed";
+            OptionMembers = "Not picked yet","Partially picked","Completely picked";
             DataClassification = ToBeClassified;
         }
         field(610; "Out of Stock"; boolean)

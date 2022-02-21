@@ -9,8 +9,10 @@ codeunit 58100 "Events Utility"
     [EventSubscriber(ObjectType::Table, Database::"Sales Line", 'OnAfterCopyFromItem', '', false, false)]
     local procedure OnAfterCopyFromItem(var SalesLine: Record "Sales Line"; Item: Record Item; CurrentFieldNo: Integer)
     begin
-        if SalesLine.type = SalesLine.Type::Item then
-            SalesLine."Part No." := Item."Part No.";
+        if GuiAllowed then BEGIN
+            if SalesLine.type = SalesLine.Type::Item then
+                SalesLine."Part No." := Item."Part No.";
+        END;
     end;
 
     [EventSubscriber(ObjectType::Table, Database::"Purchase Line", 'OnAfterAssignItemValues', '', false, false)]
@@ -45,6 +47,40 @@ codeunit 58100 "Events Utility"
         SalesHeader.SetRange("No.", RequisitionLine."Sales Order No.");
         if SalesHeader.FindFirst() then
             PurchaseOrderHeader."Customer PO No." := SalesHeader."External Document No.";
+    end;
+
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::ReqJnlManagement, 'OnBeforeOpenJnl', '', false, false)]
+    local procedure OnBeforeOpenJnl(var CurrentJnlBatchName: Code[10]; var ReqLine: Record "Requisition Line")
+    begin
+        OpenDropShipGetSalesOrder(CurrentJnlBatchName, ReqLine);
+    end;
+
+    [EventSubscriber(ObjectType::Page, Page::"Req. Worksheet", 'OnAfterLookupCurrentJnlBatchName', '', false, false)]
+    local procedure OnAfterLookupCurrentJnlBatchName(var RequisitionLine: Record "Requisition Line"; var CurrJnlBatchName: Code[10])
+    begin
+        OpenDropShipGetSalesOrder(CurrJnlBatchName, RequisitionLine);
+    end;
+
+    local procedure OpenDropShipGetSalesOrder(var CurrentJnlBatchName: Code[10]; var ReqLine: Record "Requisition Line")
+    var
+        ReqWhseName: Record "Requisition Wksh. Name";
+        GetSalesOrder: Report "Get Sales Orders";
+        NewReqLine: Record "Requisition Line";
+    begin
+        ReqWhseName.reset;
+        ReqWhseName.SetRange("Worksheet Template Name", 'REQ');
+        ReqWhseName.SetRange(Name, CurrentJnlBatchName);
+        if ReqWhseName.FindFirst() THEN
+            IF ReqWhseName."Automate Get Sales Order" then begin
+                NewReqLine.RESET;
+                NewReqLine.Init();
+                NewReqLine."Worksheet Template Name" := 'REQ';
+                NewReqLine."Journal Batch Name" := CurrentJnlBatchName;
+                GetSalesOrder.SetReqWkshLine(NewReqLine, 0);
+                GetSalesOrder.UseRequestPage(false);
+                GetSalesOrder.RUN();
+                Clear(GetSalesOrder);
+            end;
     end;
 
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Purch.-Post", 'OnCopyToTempLinesLoop', '', false, false)]
@@ -121,19 +157,21 @@ codeunit 58100 "Events Utility"
         SalesInvHeader: Record "Sales Invoice Header";
         Item: Record Item;
     begin
-        SalesInvHeader.get(SalesInvHdrNo);
-        if not SalesInvHeader."Invoice Only" then
-            exit;
-        SalesInvLine.reset;
-        SalesInvLine.SetRange("Document No.", SalesInvHeader."No.");
-        SalesInvLine.SetRange(Type, SalesInvLine.Type::Item);
-        if SalesInvLine.FindFirst() then
-            repeat
-                if Item.get(SalesInvLine."No.") then begin
-                    Item."Inventory Value Zero" := false;
-                    Item.Modify();
-                end;
-            until SalesInvLine.Next() = 0;
+        IF SalesInvHeader.get(SalesInvHdrNo) THEN BEGIN
+
+            if not SalesInvHeader."Invoice Only" then
+                exit;
+            SalesInvLine.reset;
+            SalesInvLine.SetRange("Document No.", SalesInvHeader."No.");
+            SalesInvLine.SetRange(Type, SalesInvLine.Type::Item);
+            if SalesInvLine.FindFirst() then
+                repeat
+                    if Item.get(SalesInvLine."No.") then begin
+                        Item."Inventory Value Zero" := false;
+                        Item.Modify();
+                    end;
+                until SalesInvLine.Next() = 0;
+        END;
     end;
 
     [EventSubscriber(ObjectType::Table, Database::"Requisition Line", 'OnAfterCopyFromItem', '', false, false)]
@@ -155,18 +193,24 @@ codeunit 58100 "Events Utility"
         end;
     end;
 
-    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Release Sales Document", 'OnAfterUpdateSalesDocLines', '', false, false)]
-    local procedure OnAfterUpdateSalesDocLines(var SalesHeader: Record "Sales Header"; var LinesWereModified: Boolean; PreviewMode: Boolean)
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Release Sales Document", 'OnBeforeModifySalesDoc', '', false, false)]
+    local procedure OnBeforeModifySalesDoc(var SalesHeader: Record "Sales Header"; PreviewMode: Boolean; var IsHandled: Boolean)
     var
         ShipMethod: Record "Shipment Method";
         OrderFullFillMgmt: codeunit "Order fulfilment Management";
     begin
-        if SalesHeader."Shipment Method Code" = '' then
+        if SalesHeader."Shipment Day" = SalesHeader."Shipment Day"::" " then
             exit;
         clear(OrderFullFillMgmt);
-        SalesHeader."Expected Shipment Date" := OrderFullFillMgmt.GetNextShipmentDate(SalesHeader."Shipment Method Code", SalesHeader."Shipment Date");
+        if SalesHeader."Shipment Day" <> SalesHeader."Shipment Day"::"Customer Requested Date" THEN
+            SalesHeader.Validate("Shipment Date", OrderFullFillMgmt.GetNextShipmentDate(SalesHeader, SalesHeader."Order Date"));
     end;
 
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Whse.-Sales Release", 'OnBeforeCreateWhseRequest', '', false, false)]
+    local procedure OnBeforeCreateWhseRequest(var WhseRqst: Record "Warehouse Request"; var SalesHeader: Record "Sales Header"; var SalesLine: Record "Sales Line"; WhseType: Option Inbound,Outbound)
+    begin
+        WhseRqst."Expected Shipment Date" := SalesHeader."Expected Shipment Date";
+    end;
 
     [EventSubscriber(ObjectType::Table, Database::"Sales line", 'OnValidateQuantityOnAfterCalcBaseQty', '', false, false)]
     local procedure OnValidateQuantityOnAfterCalcBaseQty(var SalesLine: Record "Sales Line"; xSalesLine: Record "Sales Line")
@@ -176,8 +220,11 @@ codeunit 58100 "Events Utility"
     begin
         if (SalesLine.Type <> SalesLine.Type::Item) OR
             (SalesLine."No." = '') OR (SalesLine.Quantity = 0) then
-            //(SalesLine."Document Type" <> SalesLine."Document Type"::Order) then //### v2.0
             exit;
+
+        IF NOT GuiAllowed then
+            EXIT;
+
         IsConfirmMsgShowed := false;
         if (SalesLine."Document Type") IN [SalesLine."Document Type"::Order, salesLine."Document Type"::Quote] then BEGIN //### v2.0
             Item.get(SalesLine."No.");
@@ -453,7 +500,8 @@ codeunit 58100 "Events Utility"
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Purch. Doc. From Sales Doc.", 'OnCopySalesLinesToPurchaseLinesOnBeforeInsert', '', false, false)]
     local procedure OnCopySalesLinesToPurchaseLinesOnBeforeInsert(var PurchaseLine: Record "Purchase Line"; SalesLine: Record "Sales Line")
     begin
-        PurchaseLine.Validate("Unit Cost", SalesLine."Unit Cost");
+        if PurchaseLine.Type in [PurchaseLine.Type::"G/L Account", PurchaseLine.Type::Item] then
+            PurchaseLine.Validate("Direct Unit Cost", SalesLine."Unit Price");
     end;
 
 }
