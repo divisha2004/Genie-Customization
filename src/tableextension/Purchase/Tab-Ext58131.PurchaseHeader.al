@@ -21,7 +21,7 @@ tableextension 58131 PurchaseHeader extends "Purchase Header"
         }
         field(58120; "Invoice Only"; Boolean)
         {
-            Caption = 'Invoice Only';
+            Caption = 'Invoice Onlyfff';
             DataClassification = ToBeClassified;
 
         }
