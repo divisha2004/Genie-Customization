@@ -2,7 +2,7 @@
   "id": "ba333dac-2847-47a6-acba-31c93c22fe08",
   "name": "BCS - Genie Customizations",
   "publisher": "Bond Consulting Services",
-  "version": "1.0.0.25",
+  "version": "1.0.0.26",
   "brief": "",
   "description": "Added customizations as per Genie Requirements. Added Part No in Item Card and flow to all the transactions. - Dev by DS",
   "privacyStatement": "",
@@ -10,7 +10,20 @@
   "help": "",
   "url": "",
   "logo": "",
-  "dependencies": [],
+  "dependencies": [
+    {
+      "id": "9c55319d-f3b9-441b-9956-0a0a04decd4b",
+      "name": "Dynamic Ship: Integrated Shipping",
+      "publisher": "Insight Works",
+      "version": "1.0.0.0"
+    },
+    {
+      "id": "ba1776ba-1198-4b4c-a61e-c4612f1880d5",
+     "name": "IWorks Common",
+      "publisher": "Insight Works",
+      "version": "2.6.7920.1"
+    }
+  ],
   "screenshots": [],
   "platform": "1.0.0.0",
   "application": "18.0.0.0",
@@ -20,6 +33,7 @@
       "to": 58349
     }
   ],
+
   "contextSensitiveHelpUrl": "https://ItemDropDown1.com/help/",
   "showMyCode": true,
   "runtime": "7.0"

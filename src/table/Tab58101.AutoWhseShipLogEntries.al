@@ -111,6 +111,17 @@ table 58101 "Auto Whse. Ship Log Entries"
             Caption = 'Out of Stock';
             DataClassification = ToBeClassified;
         }
+        field(620; "Whse Shipment Created"; Boolean)
+        {
+            Caption = 'Whse Shipment Created';
+            DataClassification = ToBeClassified;
+        }
+        field(625; "Processed Shipment Date"; Date)
+        {
+            Caption = 'Processed Shipment Date';
+            DataClassification = ToBeClassified;
+        }
+
     }
     keys
     {

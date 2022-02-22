@@ -75,6 +75,11 @@ page 58101 "Automate Whse Log Entries"
                     ApplicationArea = All;
                 }
 
+                field("Whse Shipment Created"; Rec."Whse Shipment Created")
+                {
+                    ToolTip = 'Specifies the value whether warehouse shipment has been created or not.';
+                    ApplicationArea = All;
+                }
                 field("Registered Pick No."; Rec."Registered Pick No.")
                 {
                     ToolTip = 'Specifies the value of the Registered Pick No. field.';

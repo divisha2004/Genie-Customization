@@ -19,6 +19,12 @@ pageextension 58146 SalesOrder extends "Sales Order"
                 ApplicationArea = All;
                 Style = StrongAccent;
             }
+            field("Next Shipment Date"; Rec."Next Shipment Date")
+            {
+                ApplicationArea = All;
+                Style = StrongAccent;
+            }
+
         }
 
     }
