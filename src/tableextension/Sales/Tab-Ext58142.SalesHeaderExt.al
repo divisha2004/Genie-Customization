@@ -32,7 +32,9 @@ tableextension 58142 SalesHeaderExt extends "Sales Header"
         {
             Caption = 'Next Shipment Date';
             FieldClass = FlowField;
-            CalcFormula = lookup("Auto Whse. Ship Log Entries"."Next Shipment Date" where("Sales Order No." = field("No.")));
+            CalcFormula = lookup("Warehouse Request"."Shipment Date" where("Source No." = field("No."),
+                                                                           "Source Document" = filter("Sales Order"),
+                                                                           "Completely Handled" = filter(false)));
         }
 
         modify("External Document No.")

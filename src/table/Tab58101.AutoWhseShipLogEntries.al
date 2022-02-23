@@ -69,6 +69,20 @@ table 58101 "Auto Whse. Ship Log Entries"
         {
             Caption = 'Next Shipment Date';
             DataClassification = ToBeClassified;
+            trigger OnValidate()
+            var
+                WarehouseRequest: Record "Warehouse Request";
+            begin
+                WarehouseRequest.Reset();
+                WarehouseRequest.SetRange("Source Document", WarehouseRequest."Source Document"::"Sales Order");
+                WarehouseRequest.SetRange("Source No.", rec."Sales Order No.");
+                WarehouseRequest.SetRange("Completely Handled", FALSE);
+                if WarehouseRequest.FindFirst() then begin
+                    WarehouseRequest."Shipment Date" := "Next Shipment Date";
+                    WarehouseRequest."Expected Shipment Date" := "Next Shipment Date";
+                    WarehouseRequest.Modify();
+                end;
+            end;
         }
         field(510; "Order Quantity"; Decimal)
         {
@@ -113,7 +127,7 @@ table 58101 "Auto Whse. Ship Log Entries"
         }
         field(620; "Whse Shipment Created"; Boolean)
         {
-            Caption = 'Whse Shipment Created';
+            Caption = 'Pick Registered';
             DataClassification = ToBeClassified;
         }
         field(625; "Processed Shipment Date"; Date)

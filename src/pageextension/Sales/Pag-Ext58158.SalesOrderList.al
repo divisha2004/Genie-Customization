@@ -9,7 +9,7 @@ pageextension 58158 SalesOrderList extends "Sales Order List"
                 ApplicationArea = All;
                 Style = StrongAccent;
             }
-            field("Expected Shipment Date"; Rec."Shipment Date")
+            field("Next Shipment Date"; Rec."Next Shipment Date")
             {
                 ApplicationArea = All;
                 Style = StrongAccent;

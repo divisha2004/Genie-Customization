@@ -7,35 +7,22 @@ codeunit 58101 "Order fulfilment Management"
 
     end;
 
-    procedure ProcessPrevBackOrders()
-    var
-        WhseLogEntries: Record "Auto Whse. Ship Log Entries";
-    begin
-        WhseLogEntries.reset;
-        WhseLogEntries.SetCurrentKey("Sales Order No.");
-        WhseLogEntries.SetRange("Next Shipment Date", Today);
-        WhseLogEntries.SetRange(Status, WhseLogEntries.Status::"Not picked yet");
-        if WhseLogEntries.FindFirst() then
-            repeat
-                UpdateSOShipmentDate(WhseLogEntries."Sales Order No.", WhseLogEntries."Next Shipment Date");
-                WhseLogEntries.DELETE;
-            until WhseLogEntries.Next() = 0;
-    end;
-
     procedure ProcessWhseRequest()
     var
         WarehouseShipHeader: record "Warehouse Shipment Header";
         TempCustomer: Record "Top Customers By Sales Buffer" temporary;
+        WhseRequest: Record "Warehouse Request";
+        Increment: Integer;
+        GetSourceDocuments: report "Get Source Documents";
+        SalesHeader: Record "Sales Header";
     begin
-
-        //To run exising sales orders before run the current orders
-        ProcessPrevBackOrders();
 
         WhseRequest.Reset();
         WhseRequest.SetCurrentKey("Source Document", "Source No.");
-        WhseRequest.SetRange("Shipment Date", Today);
+        WhseRequest.SetRange("Shipment Date", WorkDate());
         WhseRequest.SetRange("Destination Type", WhseRequest."Destination Type"::Customer);
         WhseRequest.SetRange("Source Document", WhseRequest."Source Document"::"Sales Order");
+        WhseRequest.SetRange("Completely Handled", false);
         if WhseRequest.FindFirst() then begin
             Increment := 1;
             TempCustomer.Reset();
@@ -59,10 +46,11 @@ codeunit 58101 "Order fulfilment Management"
         if TempCustomer.FindFirst() THEN
             repeat
                 WhseRequest.Reset();
-                WhseRequest.SetRange("Shipment Date", Today);
+                WhseRequest.SetRange("Shipment Date", WorkDate());
                 WhseRequest.SetRange("Destination Type", WhseRequest."Destination Type"::Customer);
                 WhseRequest.SetRange("Source Document", WhseRequest."Source Document"::"Sales Order");
                 WhseRequest.SetRange("Destination No.", TempCustomer.CustomerNo);
+                WhseRequest.SetRange("Completely Handled", false);
                 IF WhseRequest.FindSet() then begin
                     WarehouseShipHeader.INIT;
                     WarehouseShipHeader."No." := '';
@@ -76,11 +64,16 @@ codeunit 58101 "Order fulfilment Management"
                     GetSourceDocuments.UseRequestPage(false);
                     WhseRequest.SetRange("Location Code", WarehouseShipHeader."Location Code");
                     GetSourceDocuments.SetTableView(WhseRequest);
+                    GetSourceDocuments.SetHideDialog(true);
                     GetSourceDocuments.RunModal;
                     Clear(GetSourceDocuments);
 
                     //To process warehouse shipment lines for Item availablity checking
                     ProcessWarehouseShipmentLines(WarehouseShipHeader);
+
+                    //To update next shipment date for all sales orders
+                    if SalesHeader.get(SalesHeader."Document Type"::Order, WhseRequest."Source No.") then
+                        UpdateWhseRequestShipmentDate(WhseRequest."Source No.", GetNextShipmentDate(SalesHeader, WhseRequest."Shipment Date"))
                 end;
             UNTIL TempCustomer.Next() = 0;
     end;
@@ -98,81 +91,51 @@ codeunit 58101 "Order fulfilment Management"
         WarehouseShipLine.Reset();
         WarehouseShipLine.SetRange("No.", WarehouseShipHeader."No.");
         WarehouseShipLine.SetRange("Source Document", WarehouseShipLine."Source Document"::"Sales Order");
-        if WarehouseShipLine.FindFirst() then begin
-            repeat
-                clear(SalesLineItemAvailQty);
-                SalesLine.Reset();
-                SalesLine.SetRange("Document Type", SalesLine."Document Type"::Order);
-                SalesLine.SetRange("Document No.", WarehouseShipLine."Source No.");
-                SalesLine.SetRange("Line No.", WarehouseShipLine."Source Line No.");
+        if WarehouseShipLine.FindSet() then begin
 
-                if SalesLine.FindFirst() THEN begin
-                    CheckStockAvailable(SalesLine, SalesLineItemAvailQty);
-                    //If fully stock not available 
-                    if (SalesLineItemAvailQty <= 0) then begin
-                        WarehouseShipLine.Delete();
-                        InitWhseLogEntries(SalesLine, WarehouseShipLine, SalesLineItemAvailQty, 0);
-                    end else begin
-                        //If fully partially stock not available 
-                        if SalesLine."Outstanding Quantity" > SalesLineItemAvailQty then begin
-                            WarehouseShipLine.Validate(Quantity, SalesLineItemAvailQty);
-                            InitWhseLogEntries(SalesLine, WarehouseShipLine, SalesLineItemAvailQty, 1);
-                            WarehouseShipLine.Modify(true);
-                        end else //If fully stock available 
-                            if SalesLine."Outstanding Quantity" = SalesLineItemAvailQty THEN begin
-                                InitWhseLogEntries(SalesLine, WarehouseShipLine, SalesLineItemAvailQty, 2);
-                            end ELSE
-                                InitWhseLogEntries(SalesLine, WarehouseShipLine, SalesLineItemAvailQty, 2);
-                    end;
-                end;
-            until WarehouseShipLine.Next() = 0;
+            //Creating Warehouse Pick
+            Clear(WhseShipmentCreatePick);
+            clear(ReleaseWhseShipment);
+            ReleaseWhseShipment.Release(WarehouseShipHeader);
+            WhseShipmentCreatePick.SetWhseShipmentLine(WarehouseShipLine, WarehouseShipHeader);
+            WhseShipmentCreatePick.SetHideValidationDialog(TRUE);
+            WhseShipmentCreatePick.SetHideNothingToHandleError(true);
+            WhseShipmentCreatePick.UseRequestPage(FALSE);
+            WhseShipmentCreatePick.RunModal;
+            WhseShipmentCreatePick.GetResultMessage;
+            Clear(WhseShipmentCreatePick);
 
-            WarehouseShipLine.Reset();
-            WarehouseShipLine.SetRange("No.", WarehouseShipHeader."No.");
-            WarehouseShipLine.SetRange("Source Document", WarehouseShipLine."Source Document"::"Sales Order");
-            if WarehouseShipLine.FindFirst() then begin
 
-                //Creating Warehouse Pick
-                Clear(WhseShipmentCreatePick);
-                clear(ReleaseWhseShipment);
-                ReleaseWhseShipment.Release(WarehouseShipHeader);
-                WhseShipmentCreatePick.SetWhseShipmentLine(WarehouseShipLine, WarehouseShipHeader);
-                WhseShipmentCreatePick.SetHideValidationDialog(TRUE);
-                WhseShipmentCreatePick.UseRequestPage(FALSE);
-                WhseShipmentCreatePick.RunModal;
-                WhseShipmentCreatePick.GetResultMessage;
-                Clear(WhseShipmentCreatePick);
-
-                //Registering Warehouse Pick
-                WarehouseActLine.reset;
-                WarehouseActLine.SetRange("Whse. Document Type", WarehouseActLine."Whse. Document Type"::Shipment);
-                WarehouseActLine.SetRange("Whse. Document No.", WarehouseShipHeader."No.");
-                WarehouseActLine.SetRange("Activity Type", WarehouseActLine."Activity Type"::Pick);
-                if WarehouseActLine.FindSet() then begin
-                    Clear(WMSMgt);
-                    clear(WhseActivityRegister);
-                    WMSMgt.CheckBalanceQtyToHandle(WarehouseActLine);
-                    WhseActivityRegister.Run(WarehouseActLine);
-                    //To update whseLog entries Registered Pick
-                    UpdateWhseLogEntries(WarehouseShipLine);
-                end;
-            end else begin
-                WarehouseShipHeader.delete();
+            WarehouseActLine.reset;       //Registering Warehouse Pick
+            WarehouseActLine.SetRange("Whse. Document Type", WarehouseActLine."Whse. Document Type"::Shipment);
+            WarehouseActLine.SetRange("Whse. Document No.", WarehouseShipHeader."No.");
+            WarehouseActLine.SetRange("Activity Type", WarehouseActLine."Activity Type"::Pick);
+            if WarehouseActLine.FindSet() then begin
+                Clear(WMSMgt);
+                clear(WhseActivityRegister);
+                WMSMgt.CheckBalanceQtyToHandle(WarehouseActLine);
+                WhseActivityRegister.ShowHideDialog(TRUE);
+                WhseActivityRegister.Run(WarehouseActLine);
+                UpdateWhseLogEntries(WarehouseShipLine); //To update whseLog entries Registered Pick
+            END
+            ELSE begin
+                ReopenWhseDocument(WarehouseShipHeader);
+                WarehouseShipHeader.Delete();
             end;
-        end else begin
-            WarehouseShipHeader.Delete();
-        end;
+        end else
+            WarehouseShipHeader.DELETE;
     end;
 
 
-    local procedure CheckStockAvailable(SalesLine: Record "Sales Line"; Var
-                                                                            AvailableQty: Decimal): Boolean
+    local procedure CheckStockAvailable(SalesLine: Record "Sales Line"; Var AvailableQty: Decimal): Boolean
     var
         SalesInfoPaneMgt: Codeunit "Sales Info-Pane Management";
     begin
         Clear(AvailableQty);
         AvailableQty := SalesInfoPaneMgt.CalcAvailability(SalesLine);
-        EXIT(AvailableQty > 0)
+        IF AvailableQty = 0 then //if Available Qty is zero means that same stock qty available.
+            AvailableQty := SalesLine."Outstanding Quantity";
+        EXIT(AvailableQty >= 0)
     end;
 
     procedure GetNextShipmentDate(Var SalesHeader: Record "Sales Header"; OrderDate: Date) NexShipmentDate: Date
@@ -198,51 +161,6 @@ codeunit 58101 "Order fulfilment Management"
         end;
     END;
 
-
-    local procedure InitWhseLogEntries(SalesLine: Record "Sales Line"; WhseShipLine: Record "Warehouse Shipment Line"; QtyAvailable: Decimal; Status: Integer)
-    var
-        WarehouseLogEntries: Record "Auto Whse. Ship Log Entries";
-    begin
-        if SalesHeader.get(SalesLine."Document Type", SalesLine."Document No.") THEN;
-        WarehouseLogEntries.Init();
-        WarehouseLogEntries."Entry No." := GetLastWhseLogEntryNo();
-        WarehouseLogEntries."Sales Order No." := SalesLine."Document No.";
-        WarehouseLogEntries."Sales Order Line No." := SalesLine."Line No.";
-        WarehouseLogEntries."Item No." := SalesLine."No.";
-        WarehouseLogEntries."Part No." := SalesLine."Part No.";
-        WarehouseLogEntries.Description := SalesLine.Description;
-        WarehouseLogEntries."Location Code" := SalesLine."Location Code";
-        WarehouseLogEntries."Variant Code" := SalesLine."Variant Code";
-        WarehouseLogEntries."Shipment Method Code" := SalesHeader."Shipment Method Code";
-        WarehouseLogEntries."Order Quantity" := SalesLine.Quantity;
-        WarehouseLogEntries."Available Quantity" := QtyAvailable;
-        WarehouseLogEntries."Whse Shipment No." := WhseShipLine."No.";
-        WarehouseLogEntries."Processed Shipment Date" := WhseShipLine."Shipment Date";
-        if QtyAvailable <= 0 then begin
-            WarehouseLogEntries."Out of Stock" := true;
-            QtyAvailable := 0;
-        end;
-        WarehouseLogEntries.Status := Status;
-        IF WarehouseLogEntrieS.Status = WarehouseLogEntries.Status::"Not picked yet" THEN begin
-            WarehouseLogEntries."Remaining Qty to Ship" := SalesLine.Quantity - QtyAvailable;
-            WarehouseLogEntries."Next Shipment Date" := GetNextShipmentDate(SalesHeader, Today);
-            WarehouseLogEntries."Whse Shipment No." := '';
-            WarehouseLogEntries."Whse Shipment Created" := false;
-        end;
-        if WarehouseLogEntries.Status = WarehouseLogEntries.Status::"Partially picked" then begin
-            WarehouseLogEntries."Remaining Qty to Ship" := SalesLine.Quantity - QtyAvailable;
-            WarehouseLogEntries."Next Shipment Date" := GetNextShipmentDate(SalesHeader, Today);
-            WarehouseLogEntries."Out of Stock" := true;
-            WarehouseLogEntries."Whse Shipment Created" := true;
-        end;
-        if WarehouseLogEntries.Status = WarehouseLogEntries.Status::"Completely picked" then begin
-            WarehouseLogEntries."Remaining Qty to Ship" := 0;
-            WarehouseLogEntries."Whse Shipment Created" := true;
-            WarehouseLogEntries."Next Shipment Date" := 0D;
-        end;
-        WarehouseLogEntries.Insert(true);
-    end;
-
     local procedure UpdateSOShipmentDate(SalesOrderNo: Code[20]; NextShipmentDate: Date);
     var
         SalesHeader: Record "Sales Header";
@@ -266,20 +184,83 @@ codeunit 58101 "Order fulfilment Management"
     var
         WarehouseLogEntries: Record "Auto Whse. Ship Log Entries";
         RegisterdWhseActLine: record "Registered Whse. Activity Line";
+        WhseShipHeader: Record "Warehouse Shipment Header";
+
+        SalesHeader: Record "Sales Header";
     begin
-        WarehouseLogEntries.RESET;
-        WarehouseLogEntries.SetRange("Sales Order No.", WarehouseShipLine."Source No.");
-        WarehouseLogEntries.SetRange("Whse Shipment No.", WarehouseShipLine."No.");
-        if WarehouseLogEntries.FindFirst() then
-            repeat
-                RegisterdWhseActLine.reset;
-                RegisterdWhseActLine.SetRange("Whse. Document Type", RegisterdWhseActLine."Whse. Document Type"::Shipment);
-                RegisterdWhseActLine.SetRange("Whse. Document No.", WarehouseShipLine."No.");
-                if RegisterdWhseActLine.FindSet() then begin
-                    WarehouseLogEntries."Registered Pick No." := RegisterdWhseActLine."No.";
-                    WarehouseLogEntries.Modify();
-                end;
-            UNTIL WarehouseLogEntries.Next() = 0;
+        WhseShipHeader.Get(WarehouseShipLine."No.");
+        ReopenWhseDocument(WhseShipHeader);
+        repeat
+            SalesHeader.get(SalesHeader."Document Type"::Order, WarehouseShipLine."Source No.");
+            WarehouseLogEntries.Init();
+            WarehouseLogEntries."Entry No." := GetLastWhseLogEntryNo();
+            WarehouseLogEntries."Sales Order No." := WarehouseShipLine."Source No.";
+            WarehouseLogEntries."Sales Order Line No." := WarehouseShipLine."Source Line No.";
+            WarehouseLogEntries."Item No." := WarehouseShipLine."Item No.";
+            WarehouseLogEntries."Part No." := WarehouseShipLine."Part No.";
+            WarehouseLogEntries.Description := WarehouseShipLine.Description;
+            WarehouseLogEntries."Location Code" := WarehouseShipLine."Location Code";
+            WarehouseLogEntries."Variant Code" := WarehouseShipLine."Variant Code";
+            WarehouseLogEntries."Shipment Method Code" := SalesHeader."Shipment Method Code";
+            WarehouseLogEntries."Order Quantity" := WarehouseShipLine.Quantity;
+            WarehouseLogEntries."Whse Shipment No." := WarehouseShipLine."No.";
+            WarehouseLogEntries."Processed Shipment Date" := WarehouseShipLine."Shipment Date";
+
+            RegisterdWhseActLine.reset;
+            RegisterdWhseActLine.SetRange("Whse. Document Type", RegisterdWhseActLine."Whse. Document Type"::Shipment);
+            RegisterdWhseActLine.SetRange("Whse. Document No.", WarehouseShipLine."No.");
+            if RegisterdWhseActLine.FindSet() then
+                WarehouseLogEntries."Registered Pick No." := RegisterdWhseActLine."No.";
+
+            if WarehouseShipLine."Completely Picked" then
+                WarehouseLogEntries.Status := WarehouseLogEntries.Status::"Completely picked";
+
+            if ((WarehouseShipLine.Quantity > WarehouseShipLine."Qty. Picked") AND (WarehouseShipLine."Qty. Picked" > 0)) then begin
+                WarehouseLogEntries.Status := WarehouseLogEntries.Status::"Partially picked";
+                WarehouseShipLine.Validate(Quantity, WarehouseShipLine."Qty. Picked");
+                WarehouseLogEntries."Next Shipment Date" := GetNextShipmentDate(SalesHeader, WorkDate());
+                UpdateWhseRequestShipmentDate(WarehouseShipLine."Source No.", WarehouseLogEntries."Next Shipment Date");
+                WarehouseShipLine.Modify();
+            end;
+            if WarehouseShipLine."Qty. Picked" = 0 then begin
+                WarehouseLogEntries.Status := WarehouseLogEntries.Status::"Not Picked Yet";
+                WarehouseLogEntries."Out of Stock" := TRUE;
+                WarehouseShipLine.Delete();
+            end;
+            WarehouseLogEntries.Insert();
+        until WarehouseShipLine.Next() = 0;
+        ReleaseWhseDocument(WhseShipHeader);
+    end;
+
+    local procedure ReleaseWhseDocument(WhseShipHeader: Record "Warehouse Shipment Header")
+    var
+        ReleaseWhseShipment: Codeunit "Whse.-Shipment Release";
+    begin
+        ReleaseWhseShipment.Release(WhseShipHeader);
+    end;
+
+    local procedure ReopenWhseDocument(WhseShipHeader: Record "Warehouse Shipment Header")
+    var
+        ReleaseWhseShipment: Codeunit "Whse.-Shipment Release";
+    begin
+        ReleaseWhseShipment.Reopen(WhseShipHeader);
+    end;
+
+
+    procedure UpdateWhseRequestShipmentDate(SalesOrderNo: code[20]; NextShipmentDate: Date)
+
+    var
+        WhseRequest: Record "Warehouse Request";
+    begin
+        WhseRequest.Reset();
+        WhseRequest.SetRange("Source Document", WhseRequest."Source Document"::"Sales Order");
+        WhseRequest.SetRange("Source No.", SalesOrderNo);
+        WhseRequest.SetRange("Completely Handled", false);
+        if WhseRequest.FindFirst() then begin
+            WhseRequest."Shipment Date" := NextShipmentDate;
+            WhseRequest."Expected Shipment Date" := NextShipmentDate;
+            WhseRequest.Modify();
+        end;
     end;
 
     local procedure GetLastWhseLogEntryNo(): Integer;
@@ -293,14 +274,4 @@ codeunit 58101 "Order fulfilment Management"
             EXIT(1);
     end;
 
-    var
-        GetSourceDocuments: Report "Get Source Documents";
-        SalesHeader: Record "Sales Header";
-        SalesLine: Record "Sales Line";
-        AvailableQty: Decimal;
-
-        Increment: Integer;
-        WhseRequest: record "Warehouse Request";
-
-        Customer: Record Customer;
 }

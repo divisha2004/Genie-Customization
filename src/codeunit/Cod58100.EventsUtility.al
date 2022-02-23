@@ -83,6 +83,12 @@ codeunit 58100 "Events Utility"
             end;
     end;
 
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Create Pick", 'OnCreateWhseDocumentOnBeforeShowError', '', false, false)]
+    local procedure OnCreateWhseDocumentOnBeforeShowError(var ShowError: Boolean)
+    begin
+        ShowError := false;
+    end;
+
     [EventSubscriber(ObjectType::Codeunit, Codeunit::"Purch.-Post", 'OnCopyToTempLinesLoop', '', false, false)]
     local procedure OnCopyToTempLinesLoop(var PurchLine: Record "Purchase Line")
     var

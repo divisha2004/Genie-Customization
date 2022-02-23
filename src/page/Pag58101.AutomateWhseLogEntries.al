@@ -64,18 +64,13 @@ page 58101 "Automate Whse Log Entries"
                     ToolTip = 'Specifies the value of the Order Quantity field.';
                     ApplicationArea = All;
                 }
-                field("Available Quantity"; Rec."Available Quantity")
-                {
-                    ToolTip = 'Specifies the value of the Available Quantity field.';
-                    ApplicationArea = All;
-                }
                 field("Out of Stock"; Rec."Out of Stock")
                 {
                     ToolTip = 'Specifies the value of the Out of Stock field.';
                     ApplicationArea = All;
                 }
 
-                field("Whse Shipment Created"; Rec."Whse Shipment Created")
+                field("Processed Shipment Date"; Rec."Processed Shipment Date")
                 {
                     ToolTip = 'Specifies the value whether warehouse shipment has been created or not.';
                     ApplicationArea = All;

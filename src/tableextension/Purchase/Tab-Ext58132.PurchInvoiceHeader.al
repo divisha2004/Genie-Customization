@@ -19,7 +19,7 @@ tableextension 58132 PurchInvoiceHeader extends "Purch. Inv. Header"
         }
         field(58120; "Invoice Only"; Boolean)
         {
-            Caption = 'Invoice Only test';
+            Caption = 'Invoice Only';
             DataClassification = ToBeClassified;
 
         }

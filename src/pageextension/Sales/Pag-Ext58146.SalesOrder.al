@@ -83,6 +83,7 @@ pageextension 58146 SalesOrder extends "Sales Order"
                 trigger OnAction()
                 var
                     OrderfulfilMgmt: codeunit "Order fulfilment Management";
+
                 begin
                     Clear(OrderfulfilMgmt);
                     OrderfulfilMgmt.ProcessWhseRequest();
